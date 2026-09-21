@@ -45,7 +45,8 @@ jobs:
     needs: [setup, release]
     runs-on: macos-latest
     env:
-      PACKAGENAME: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_macos_universal2
+      PACKAGENAME: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_macos_universal2.dmg
+      PACKAGENAME_NOSR: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_macos_nosr_universal2.dmg
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python 3.10
@@ -57,10 +58,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pyinstaller
-        pip install sr-vulkan
-        pip install sr-vulkan-model-waifu2x
-        pip install sr-vulkan-model-realcugan
-        pip install sr-vulkan-model-realesrgan
         cd script
         pip install delocate wheel_filename==1.4.2
         python build_universal2.py pillow
@@ -71,7 +68,7 @@ jobs:
         cd ..
         pip install -r src/requirements_macos.txt
         brew install create-dmg
-    - name: Build
+    - name: Build_nosr
       run: |
         python script/build_qrc.py
         cd src
@@ -93,11 +90,38 @@ jobs:
             --window-size 800 400 \
             --icon-size 100 \
             --hide-extension "JMComic.app" --app-drop-link 600 185 \
+            ${{ env.PACKAGENAME_NOSR }}.dmg dist/JMComic.app
+
+        mv ${{ env.PACKAGENAME_NOSR }} ..
+        cd ..
+    - name: Build
+      run: |
+        pip install sr-vulkan
+        pip install sr-vulkan-model-waifu2x
+        pip install sr-vulkan-model-realcugan
+        pip install sr-vulkan-model-realesrgan
+        cd src
+        cp ../res/icon/Icon.icns ./
+        pyinstaller --target-architecture=universal2 --clean --onedir --name JMComic \
+            --hidden-import sr_ncnn_vulkan --hidden-import PySide6 --hidden-import requests \
+            --hidden-import urllib3 --hidden-import websocket-client --hidden-import pillow \
+            --hidden-import config \
+            --hidden-import component \
+            --hidden-import server \
+            --hidden-import task \
+            --hidden-import tools \
+            --hidden-import view \
+            --strip --windowed -i Icon.icns \
+            start.py
+        xattr -cr dist/JMComic.app
+        create-dmg --volname "JMComic" --volicon "Icon.icns" --icon "JMComic.app" 200 190 \
+            --window-pos 200 120 \
+            --window-size 800 400 \
+            --icon-size 100 \
+            --hide-extension "JMComic.app" --app-drop-link 600 185 \
             ${{ env.PACKAGENAME }}.dmg dist/JMComic.app
 
-        zip -9 jmcomic.zip ${{ env.PACKAGENAME }}.dmg
-        mv ${{ env.PACKAGENAME }}.dmg ..
-        mv jmcomic.zip ..
+        mv ${{ env.PACKAGENAME }} ..
         cd ..
     - name: Upload
       uses: actions/upload-artifact@v4
@@ -110,72 +134,17 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.release.outputs.Up_Url }}
-        asset_path: ${{ env.PACKAGENAME }}.dmg
-        asset_name: ${{ env.PACKAGENAME }}.dmg
+        asset_path: ${{ env.PACKAGENAME }}
+        asset_name: ${{ env.PACKAGENAME }}
         asset_content_type: application/gzip
-
-  macos-nosr:
-    needs: [setup, release]
-    runs-on: macos-latest
-    env:
-      PACKAGENAME: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_macos_nosr_universal2
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pyinstaller
-        cd script
-        pip install delocate wheel_filename==1.4.2
-        python build_universal2.py pillow
-        python build_universal2.py cffi 1.17.1
-        python build_universal2.py curl_cffi 0.13.0
-        python build_universal2.py pyyaml 6.0.2
-        pip install *.whl
-        cd ..
-        pip install -r src/requirements_macos.txt
-        brew install create-dmg
-    - name: Build
-      run: |
-        python script/build_qrc.py
-        cd src
-        cp ../res/icon/Icon.icns ./
-        pyinstaller --target-architecture=universal2 --clean --onedir --name JMComic \
-            --hidden-import sr_ncnn_vulkan --hidden-import PySide6 --hidden-import requests \
-            --hidden-import urllib3 --hidden-import websocket-client --hidden-import pillow \
-            --hidden-import config \
-            --hidden-import component \
-            --hidden-import server \
-            --hidden-import task \
-            --hidden-import tools \
-            --hidden-import view \
-            --strip --windowed -i Icon.icns \
-            start.py
-        xattr -cr dist/JMComic.app
-        create-dmg --volname "JMComic" --volicon "Icon.icns" --icon "JMComic.app" 200 190 \
-            --window-pos 200 120 \
-            --window-size 800 400 \
-            --icon-size 100 \
-            --hide-extension "JMComic.app" --app-drop-link 600 185 \
-            ${{ env.PACKAGENAME }}.dmg dist/JMComic.app
-
-        zip -9 jmcomic.zip ${{ env.PACKAGENAME }}.dmg
-        mv ${{ env.PACKAGENAME }}.dmg ..
-        mv jmcomic.zip ..
-        cd ..
-    - name: upload-macos
+    - name: upload-macos-nosr
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.release.outputs.Up_Url }}
-        asset_path: ${{ env.PACKAGENAME }}.dmg
-        asset_name: ${{ env.PACKAGENAME }}.dmg
+        asset_path: ${{ env.PACKAGENAME_NOSR }}
+        asset_name: ${{ env.PACKAGENAME_NOSR }}
         asset_content_type: application/gzip
 
   windows:
@@ -183,56 +152,8 @@ jobs:
     needs: [setup, release]
     runs-on: windows-latest
     env:
-      PACKAGENAME: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_windows_x64
-      EXE_NAME: start.exe
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pyinstaller
-        pip install -r src\requirements.txt
-        Invoke-WebRequest -Uri "https://github.com/upx/upx/releases/download/v5.0.1/upx-5.0.1-win64.zip" -OutFile "upx.zip"
-        Expand-Archive -Path "upx.zip" -DestinationPath "D:\"
-        Remove-Item "upx.zip"
-    - name: Build
-      run: |
-        python script/build_qrc.py
-        cd src
-        cp ..\res\icon\icon.ico .\
-        pyinstaller --hidden-import=_cffi_backend --collect-all curl_cffi  -F -w -i icon.ico start.py --upx-dir "D:\upx-5.0.1-win64"
-
-        $pkg = "jmcomic"
-        Remove-Item -Recurse -Force $pkg -ErrorAction SilentlyContinue
-        New-Item $pkg -ItemType Directory
-        Move-Item "dist\$env:EXE_NAME" "$pkg\start.exe"
-        Copy-Item ..\LICENSE                $pkg\
-        Copy-Item ..\CHANGELOG              $pkg\
-        7z a -t7z -mx9 "$env:PACKAGENAME.7z" $pkg
-        Move-Item "${env:PACKAGENAME}.7z" ..\
-        cd ..
-
-    - name: upload-win
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url:         ${{ needs.release.outputs.Up_Url }}
-        asset_path:         ${{ env.PACKAGENAME }}.7z
-        asset_name:         ${{ env.PACKAGENAME }}.7z
-        asset_content_type: application/x-7z-compressed
-
-  windows-nosr:
-    if: github.event_name == 'push' || github.event.inputs.build_windows_nosr == 'true'
-    needs: [setup, release]
-    runs-on: windows-latest
-    env:
-      PACKAGENAME: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_windows_x64_nosr
+      PACKAGENAME: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_windows_x64.7z
+      PACKAGENAME_NOSR: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_windows_nosr_x64.7z
       EXE_NAME: start.exe
     steps:
     - uses: actions/checkout@v4
@@ -254,15 +175,32 @@ jobs:
         python script/build_qrc.py
         cd src
         cp ..\res\icon\icon.ico .\
-        pyinstaller --hidden-import=_cffi_backend --collect-all curl_cffi -F -w -i icon.ico start.py --upx-dir "D:\upx-5.0.1-win64"
+        pyinstaller --hidden-import=_cffi_backend --collect-all curl_cffi  -F -w -i icon.ico start.py --upx-dir "D:\upx-5.0.1-win64"
+
         $pkg = "jmcomic"
         Remove-Item -Recurse -Force $pkg -ErrorAction SilentlyContinue
         New-Item $pkg -ItemType Directory
         Move-Item "dist\$env:EXE_NAME" "$pkg\start.exe"
         Copy-Item ..\LICENSE                $pkg\
         Copy-Item ..\CHANGELOG              $pkg\
-        7z a -t7z -mx9 "$env:PACKAGENAME.7z" $pkg
-        Move-Item "${env:PACKAGENAME}.7z" ..\
+        7z a -t7z -mx9 "$env:PACKAGENAME_NOSR" $pkg
+        Move-Item "${env:PACKAGENAME_NOSR}" ..\
+        cd ..
+    - name: Build
+      run: |
+        pip install -r src\requirements.txt
+        cd src
+        cp ..\res\icon\icon.ico .\
+        pyinstaller --hidden-import=_cffi_backend --collect-all curl_cffi  -F -w -i icon.ico start.py --upx-dir "D:\upx-5.0.1-win64"
+
+        $pkg = "jmcomic"
+        Remove-Item -Recurse -Force $pkg -ErrorAction SilentlyContinue
+        New-Item $pkg -ItemType Directory
+        Move-Item "dist\$env:EXE_NAME" "$pkg\start.exe"
+        Copy-Item ..\LICENSE                $pkg\
+        Copy-Item ..\CHANGELOG              $pkg\
+        7z a -t7z -mx9 "$env:PACKAGENAME" $pkg
+        Move-Item "${env:PACKAGENAME}" ..\
         cd ..
 
     - name: upload-win
@@ -271,10 +209,19 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url:         ${{ needs.release.outputs.Up_Url }}
-        asset_path:         ${{ env.PACKAGENAME }}.7z
-        asset_name:         ${{ env.PACKAGENAME }}.7z
+        asset_path:         ${{ env.PACKAGENAME }}
+        asset_name:         ${{ env.PACKAGENAME }}
         asset_content_type: application/x-7z-compressed
-
+    - name: upload-win-nosr
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url:         ${{ needs.release.outputs.Up_Url }}
+        asset_path:         ${{ env.PACKAGENAME_NOSR }}
+        asset_name:         ${{ env.PACKAGENAME_NOSR }}
+        asset_content_type: application/x-7z-compressed
+        
   ubuntu:
     if: github.event_name == 'push' || github.event.inputs.build_ubuntu == 'true'
     needs: [setup, release]
@@ -289,7 +236,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
+        python3 -m pip install --upgrade pip
         pip install pyinstaller
         pip install -r src\requirements_nosr.txt
         python3 script/build_qrc.py
@@ -351,7 +298,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
+        python3 -m pip install --upgrade pip
         pip install pyinstaller
         pip install -r src\requirements_nosr.txt
         python3 script/build_qrc.py
@@ -413,7 +360,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
+        python3 -m pip install --upgrade pip
         pip install pyinstaller
         pip install -r src\requirements_nosr.txt
         python3 script/build_qrc.py
@@ -483,7 +430,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
+        python3 -m pip install --upgrade pip
         pip install pyinstaller
         pip install -r src\requirements_nosr.txt
         python3 script/build_qrc.py

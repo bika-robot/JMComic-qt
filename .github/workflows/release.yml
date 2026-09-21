@@ -168,11 +168,6 @@ jobs:
         mv ${{ env.PACKAGENAME }}.dmg ..
         mv jmcomic.zip ..
         cd ..
-    - name: Upload
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ env.PACKAGENAME }}
-        path: jmcomic.zip
     - name: upload-macos
       uses: actions/upload-release-asset@v1
       env:
@@ -222,12 +217,6 @@ jobs:
         Move-Item "${env:PACKAGENAME}.7z" ..\
         cd ..
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ env.PACKAGENAME }}
-        path: ${{ env.PACKAGENAME }}.7z
-
     - name: upload-win
       uses: actions/upload-release-asset@v1
       env:
@@ -276,12 +265,6 @@ jobs:
         Move-Item "${env:PACKAGENAME}.7z" ..\
         cd ..
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ env.PACKAGENAME }}
-        path: ${{ env.PACKAGENAME }}.7z
-
     - name: upload-win
       uses: actions/upload-release-asset@v1
       env:
@@ -292,57 +275,266 @@ jobs:
         asset_name:         ${{ env.PACKAGENAME }}.7z
         asset_content_type: application/x-7z-compressed
 
-  # ubuntu:
-  #   needs: [setup, release]
-  #   runs-on: ubuntu-latest
-  #   env:
-  #     PACKAGENAME: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_linux_x64
-  #   steps:
-  #   - uses: actions/checkout@v4
-  #   - name: Set up Python 3.9
-  #     uses: actions/setup-python@v5
-  #     with:
-  #       python-version: 3.9
-  #   - name: Install dependencies
-  #     run: |
-  #       sudo apt-get install -y fuse libfuse2
-  #       python -m pip install --upgrade pip
-  #       pip install pyinstaller        
-  #       pip install sr-vulkan
-  #       pip install sr-vulkan-model-waifu2x
-  #       pip install sr-vulkan-model-realcugan
-  #       pip install sr-vulkan-model-realesrgan
-  #       pip install -r src/requirements_nosr.txt
-  #   - name: Build
-  #     run: |
-  #       python script/build_qrc.py
-  #       cd src
-  #       pyinstaller --hidden-import=_cffi_backend --collect-data curl_cffi --add-data "../lib/linux/*:." -w start.py
-  #       cd dist
-  #       mkdir -p jmcomic.AppRun/usr/bin
-  #       wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
-  #       chmod +x appimagetool-x86_64.AppImage
-  #       cp -r ../../res/appimage/* jmcomic.AppRun/
-  #       cp -r ../../res/icon/logo_round.png jmcomic.AppRun/JMComic.png
-  #       cp -r start/* jmcomic.AppRun/usr/bin/
+  ubuntu:
+    if: github.event_name == 'push' || github.event.inputs.build_ubuntu == 'true'
+    needs: [setup, release]
+    runs-on: ubuntu-latest
+    container: 
+      image: tonquer/ubuntu-python:22.04
+      options: --privileged
+    env:
+      PACKAGENAME: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_ubuntu_amd64.deb
+      PACKAGENAME_NOSR: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_ubuntu_nosr_amd64.deb
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -r src\requirements_nosr.txt
+        python3 script/build_qrc.py
+    - name: Build_nosr
+      run: |
+        cd src
+        pyinstaller --hidden-import=_cffi_backend --collect-all curl_cffi  -w start.py
+        cd dist
+        cp -r ../../res/ubuntu .
+        cp -r start/* ubuntu/opt/JMComic/
+        chmod -R 755 ubuntu
+        dpkg-deb --root-owner-group  -b ubuntu jmcomic.deb
+        mv jmcomic.deb ../../${{ env.PACKAGENAME_NOSR }}
+        cd ../..
+    - name: Build
+      run: |
+        pip install -r src\requirements.txt
+        cd src
+        pyinstaller --hidden-import=_cffi_backend --collect-all curl_cffi  -w start.py
+        cd dist
+        cp -r ../../res/ubuntu .
+        cp -r start/* ubuntu/opt/JMComic/
+        chmod -R 755 ubuntu
+        dpkg-deb --root-owner-group  -b ubuntu jmcomic.deb
+        mv jmcomic.deb ../../${{ env.PACKAGENAME }}
+        cd ../..
 
-  #       mv jmcomic.AppRun/usr/bin/start jmcomic.AppRun/usr/bin/JMComic
-  #       chmod +x jmcomic.AppRun/AppRun
-  #       chmod +x jmcomic.AppRun/usr/bin/JMComic
-  #       ./appimagetool-x86_64.AppImage jmcomic.AppRun
-  #       mv JMComic-x86_64.AppImage ../../${{ env.PACKAGENAME }}-x86_64.AppImage
-  #       cd ../..
-  #   - name: Upload
-  #     uses: actions/upload-artifact@v4
-  #     with:
-  #       name: ${{ env.PACKAGENAME }}
-  #       path: ${{ env.PACKAGENAME }}-x86_64.AppImage
-  #   - name: upload-win
-  #     uses: actions/upload-release-asset@v1
-  #     env:
-  #       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #     with:
-  #       upload_url: ${{ needs.release.outputs.Up_Url }}
-  #       asset_path: ${{ env.PACKAGENAME }}-x86_64.AppImage
-  #       asset_name: ${{ env.PACKAGENAME }}-x86_64.AppImage
-  #       asset_content_type: application/zip
+    - name: upload-ubuntu
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url:         ${{ needs.release.outputs.Up_Url }}
+        asset_path:         ${{ env.PACKAGENAME }}
+        asset_name:         ${{ env.PACKAGENAME }}
+        asset_content_type: application/gzip
+
+    - name: upload-ubuntu-nosr
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url:         ${{ needs.release.outputs.Up_Url }}
+        asset_path:         ${{ env.PACKAGENAME_NOSR }}
+        asset_name:         ${{ env.PACKAGENAME_NOSR }}
+        asset_content_type: application/gzip
+
+  uos:
+    if: github.event_name == 'push' || github.event.inputs.build_uos == 'true'
+    needs: [setup, release]
+    runs-on: ubuntu-latest
+    container: 
+      image: tonquer/deepin-python:v20
+      options: --privileged
+    env:
+      PACKAGENAME: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_uos_amd64.deb
+      PACKAGENAME_NOSR: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_uos_nosr_amd64.deb
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -r src\requirements_nosr.txt
+        python3 script/build_qrc.py
+    - name: Build_nosr
+      run: |
+        cd src
+        pyinstaller --hidden-import=_cffi_backend --collect-all curl_cffi  -w start.py
+        cd dist
+        cp -r ../../res/uos .
+        cp -r start/* uos/opt/apps/org.tonquer.jmcomic/files/
+        chmod -R 755 uos
+        dpkg-deb --root-owner-group  -b uos jmcomic.deb
+        mv jmcomic.deb ../../${{ env.PACKAGENAME_NOSR }}
+        cd ../..
+    - name: Build
+      run: |
+        pip install -r src\requirements.txt
+        cd src
+        pyinstaller --hidden-import=_cffi_backend --collect-all curl_cffi  -w start.py
+        cd dist
+        cp -r ../../res/uos .
+        cp -r start/* uos/opt/apps/org.tonquer.jmcomic/files/
+        chmod -R 755 uos
+        dpkg-deb --root-owner-group  -b uos jmcomic.deb
+        mv jmcomic.deb ../../${{ env.PACKAGENAME }}
+        cd ../..
+        
+    - name: upload-uos
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url:         ${{ needs.release.outputs.Up_Url }}
+        asset_path:         ${{ env.PACKAGENAME }}
+        asset_name:         ${{ env.PACKAGENAME }}
+        asset_content_type: application/gzip
+
+    - name: upload-uos-nosr
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url:         ${{ needs.release.outputs.Up_Url }}
+        asset_path:         ${{ env.PACKAGENAME_NOSR }}
+        asset_name:         ${{ env.PACKAGENAME_NOSR }}
+        asset_content_type: application/gzip
+
+  ubuntu-appimage228:
+    if: github.event_name == 'push' || github.event.inputs.build_appimage == 'true'
+    needs: [setup, release]
+    runs-on: ubuntu-latest
+    container: 
+      image: tonquer/deepin-python:v20
+      options: --privileged
+    env:
+      PACKAGENAME: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_linux-glibc2.28.AppImage
+      PACKAGENAME_NOSR: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_linux_nosr-glibc2.28.AppImage
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -r src\requirements_nosr.txt
+        python3 script/build_qrc.py
+    - name: Build_nosr
+      run: |
+        cd src
+        pyinstaller --hidden-import=_cffi_backend --collect-all curl_cffi  -w start.py
+        cd dist
+        mkdir -p jmcomic.AppRun/usr/bin
+        cp -r ../../res/appimage/* jmcomic.AppRun/
+        cp -r ../../res/icon/logo_round.png jmcomic.AppRun/JMComic.png
+        cp -r start/* jmcomic.AppRun/usr/bin/
+
+        chmod +x jmcomic.AppRun/AppRun
+        chmod +x jmcomic.AppRun/usr/bin/start
+        appimagetool-x86_64.AppImage jmcomic.AppRun
+        mv JMComic-x86_64.AppImage ../../${{ env.PACKAGENAME_NOSR }}
+        cd ../..
+    - name: Build
+      run: |
+        pip install -r src\requirements.txt
+        cd src
+        pyinstaller --hidden-import=_cffi_backend --collect-all curl_cffi  -w start.py
+        cd dist
+        mkdir -p jmcomic.AppRun/usr/bin
+        cp -r ../../res/appimage/* jmcomic.AppRun/
+        cp -r ../../res/icon/logo_round.png jmcomic.AppRun/JMComic.png
+        cp -r start/* jmcomic.AppRun/usr/bin/
+
+        chmod +x jmcomic.AppRun/AppRun
+        chmod +x jmcomic.AppRun/usr/bin/start
+        appimagetool-x86_64.AppImage jmcomic.AppRun
+        mv JMComic-x86_64.AppImage ../../${{ env.PACKAGENAME }}
+        cd ../..
+        
+    - name: upload-uos
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url:         ${{ needs.release.outputs.Up_Url }}
+        asset_path:         ${{ env.PACKAGENAME }}
+        asset_name:         ${{ env.PACKAGENAME }}
+        asset_content_type: application/gzip
+
+    - name: upload-uos-nosr
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url:         ${{ needs.release.outputs.Up_Url }}
+        asset_path:         ${{ env.PACKAGENAME_NOSR }}
+        asset_name:         ${{ env.PACKAGENAME_NOSR }}
+        asset_content_type: application/gzip
+
+  ubuntu-appimage239:
+    if: github.event_name == 'push' || github.event.inputs.build_appimage == 'true'
+    needs: [setup, release]
+    runs-on: ubuntu-latest
+    container: 
+      image: tonquer/ubuntu-python:24.04
+      options: --privileged
+    env:
+      PACKAGENAME: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_linux-glibc2.39.AppImage
+      PACKAGENAME_NOSR: ${{ needs.setup.outputs.PACKAGE_PREFIX }}_linux_nosr-glibc2.39.AppImage
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -r src\requirements_nosr.txt
+        python3 script/build_qrc.py
+    - name: Build_nosr
+      run: |
+        cd src
+        pyinstaller --hidden-import=_cffi_backend --collect-all curl_cffi  -w start.py
+        cd dist
+        mkdir -p jmcomic.AppRun/usr/bin
+        cp -r ../../res/appimage/* jmcomic.AppRun/
+        cp -r ../../res/icon/logo_round.png jmcomic.AppRun/JMComic.png
+        cp -r start/* jmcomic.AppRun/usr/bin/
+
+        chmod +x jmcomic.AppRun/AppRun
+        chmod +x jmcomic.AppRun/usr/bin/start
+        appimagetool-x86_64.AppImage jmcomic.AppRun
+        mv JMComic-x86_64.AppImage ../../${{ env.PACKAGENAME_NOSR }}
+        cd ../..
+    - name: Build
+      run: |
+        pip install -r src\requirements.txt
+        cd src
+        pyinstaller --hidden-import=_cffi_backend --collect-all curl_cffi  -w start.py
+        cd dist
+        mkdir -p jmcomic.AppRun/usr/bin
+        cp -r ../../res/appimage/* jmcomic.AppRun/
+        cp -r ../../res/icon/logo_round.png jmcomic.AppRun/JMComic.png
+        cp -r start/* jmcomic.AppRun/usr/bin/
+
+        chmod +x jmcomic.AppRun/AppRun
+        chmod +x jmcomic.AppRun/usr/bin/start
+        appimagetool-x86_64.AppImage jmcomic.AppRun
+        mv JMComic-x86_64.AppImage ../../${{ env.PACKAGENAME }}
+        cd ../..
+        
+    - name: upload-appImage
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url:         ${{ needs.release.outputs.Up_Url }}
+        asset_path:         ${{ env.PACKAGENAME }}
+        asset_name:         ${{ env.PACKAGENAME }}
+        asset_content_type: application/gzip
+
+    - name: upload-appImage-nosr
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url:         ${{ needs.release.outputs.Up_Url }}
+        asset_path:         ${{ env.PACKAGENAME_NOSR }}
+        asset_name:         ${{ env.PACKAGENAME_NOSR }}
+        asset_content_type: application/gzip

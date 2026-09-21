@@ -14,15 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     container: 
       image: tonquer/ubuntu-python:22.04
-      env:
-        PACKAGENAME: jmcomic_py310_linux
       options: --privileged
+    env:
+      PACKAGENAME: jmcomic_py310_linux
     steps:
     - uses: actions/checkout@v7
     - name: Install dependencies
       run: |
-        apt-get update
-        apt-get install -y fuse libfuse2
         python3 -m pip install --upgrade pip
         pip install pyinstaller
         pip install -r src/requirements.txt
@@ -33,8 +31,6 @@ jobs:
         pyinstaller --hidden-import=_cffi_backend --collect-all curl_cffi  -w start.py
         cd dist
         mkdir -p jmcomic.AppRun/usr/bin
-        wget https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
-        chmod +x appimagetool-x86_64.AppImage
         cp -r ../../res/appimage/* jmcomic.AppRun/
         cp -r ../../res/icon/logo_round.png jmcomic.AppRun/JMComic.png
         cp -r start/* jmcomic.AppRun/usr/bin/
@@ -42,7 +38,7 @@ jobs:
         mv jmcomic.AppRun/usr/bin/start jmcomic.AppRun/usr/bin/JMComic
         chmod +x jmcomic.AppRun/AppRun
         chmod +x jmcomic.AppRun/usr/bin/JMComic
-        ./appimagetool-x86_64.AppImage jmcomic.AppRun
+        appimagetool-x86_64.AppImage jmcomic.AppRun
         mv JMComic-x86_64.AppImage ../../${{ env.PACKAGENAME }}-x86_64.AppImage
         cd ../..
     - name: Upload

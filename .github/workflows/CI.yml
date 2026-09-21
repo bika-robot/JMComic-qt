@@ -22,8 +22,9 @@ jobs:
     - uses: actions/checkout@v7
     - name: Install dependencies
       run: |
-        pip install pyinstaller --break-system-packages
-        pip install -r src/requirements.txt --break-system-packages
+        python3 -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -r src/requirements.txt
     - name: Build
       run: |
         python3 script/build_qrc.py

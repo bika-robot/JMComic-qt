@@ -12,9 +12,11 @@ on:
 jobs:
   ubuntu:
     runs-on: ubuntu-latest
-    container: tonquer/ubuntu-python:22.04
-    env:
-      PACKAGENAME: jmcomic_py310_linux
+    container: 
+      image: tonquer/ubuntu-python:22.04
+      env:
+        PACKAGENAME: jmcomic_py310_linux
+      options: --privileged
     steps:
     - uses: actions/checkout@v7
     - name: Install dependencies

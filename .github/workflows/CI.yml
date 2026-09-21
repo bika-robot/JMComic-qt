@@ -10,13 +10,47 @@ on:
     branches: [ main ]
 
 jobs:
-  uos:
+  ubuntu:
+    runs-on: ubuntu-latest
+    container: 
+      image: tonquer/ubuntu-python:22.04
+      options: --privileged
+    env:
+      PACKAGENAME: jmcomic_py310_ubuntu_amd64
+    steps:
+    - uses: actions/checkout@v7
+    - name: Install dependencies
+      run: |
+        python3 -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -r src/requirements.txt
+    - name: Build
+      run: |
+        python3 script/build_qrc.py
+        cd src
+        pyinstaller --hidden-import=_cffi_backend --collect-all curl_cffi  -w start.py
+        cd dist
+        cp -r ../../res/ubuntu .
+        cp -r start/* ubuntu/opt/JMComic/
+        chmod +x jmcomic.AppRun/AppRun
+        chmod +x jmcomic.AppRun/usr/bin/start
+        dpkg-deb --root-owner-group  -b ubuntu jmcomic.deb
+        mv jmcomic.deb ../../${{ env.PACKAGENAME }}.deb
+        cd ../..
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.PACKAGENAME }}
+        path: ${{ env.PACKAGENAME }}.deb
+        retention-days: 7
+
+  deepin:
     runs-on: ubuntu-latest
     container: 
       image: tonquer/deepin-python:v20
       options: --privileged
     env:
-      PACKAGENAME: jmcomic_py310_uos
+      PACKAGENAME: jmcomic_py310_linux_glibc2.28
     steps:
     - uses: actions/checkout@v7
     - name: Install dependencies
@@ -38,11 +72,44 @@ jobs:
         chmod +x jmcomic.AppRun/AppRun
         chmod +x jmcomic.AppRun/usr/bin/start
         appimagetool-x86_64.AppImage jmcomic.AppRun
-        mv JMComic-x86_64.AppImage ../../${{ env.PACKAGENAME }}-x86_64.AppImage
+        mv JMComic-x86_64.AppImage ../../${{ env.PACKAGENAME }}.AppImage
         cd ../..
     - name: Upload
       uses: actions/upload-artifact@v4
       with:
         name: ${{ env.PACKAGENAME }}
-        path: ${{ env.PACKAGENAME }}-x86_64.AppImage
+        path: ${{ env.PACKAGENAME }}.AppImage
+        retention-days: 7
+
+  uos:
+    runs-on: ubuntu-latest
+    container: 
+      image: tonquer/deepin-python:v20
+      options: --privileged
+    env:
+      PACKAGENAME: jmcomic_py310_uos_amd64
+    steps:
+    - uses: actions/checkout@v7
+    - name: Install dependencies
+      run: |
+        python3 -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -r src/requirements.txt
+    - name: Build
+      run: |
+        python3 script/build_qrc.py
+        cd src
+        pyinstaller --hidden-import=_cffi_backend --collect-all curl_cffi  -w start.py
+        cd dist
+        cp -r ../../res/uos .
+        cp -r start/* uos/opt/apps/org.tonquer.jmcomic/files/
+        chmod -R 755 uos
+        dpkg-deb --root-owner-group  -b uos jmcomic.deb
+        mv dist/jmcomic.deb ../../${{ env.PACKAGENAME }}.deb
+        cd ../..
+    - name: Upload
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.PACKAGENAME }}
+        path: ${{ env.PACKAGENAME }}.deb
         retention-days: 7

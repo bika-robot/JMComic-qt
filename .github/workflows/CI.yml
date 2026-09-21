@@ -20,12 +20,12 @@ jobs:
       run: |
         apt-get update
         apt-get install -y fuse libfuse2
-        python -m pip install --upgrade pip
+        python3 -m pip install --upgrade pip
         pip install pyinstaller
         pip install -r src/requirements.txt
     - name: Build
       run: |
-        python script/build_qrc.py
+        python3 script/build_qrc.py
         cd src
         pyinstaller --hidden-import=_cffi_backend --collect-all curl_cffi  -w start.py
         cd dist

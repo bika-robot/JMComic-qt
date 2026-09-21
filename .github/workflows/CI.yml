@@ -16,6 +16,7 @@ jobs:
     env:
       PACKAGENAME: jmcomic_py310_linux
     steps:
+    - uses: actions/checkout@v7
     - name: Install dependencies
       run: |
         apt-get update

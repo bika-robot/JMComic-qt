@@ -10,13 +10,13 @@ on:
     branches: [ main ]
 
 jobs:
-  ubuntu:
+  uos:
     runs-on: ubuntu-latest
     container: 
-      image: tonquer/ubuntu-python:22.04
+      image: tonquer/deepin-python:v20
       options: --privileged
     env:
-      PACKAGENAME: jmcomic_py310_linux
+      PACKAGENAME: jmcomic_py310_uos
     steps:
     - uses: actions/checkout@v7
     - name: Install dependencies
@@ -35,9 +35,8 @@ jobs:
         cp -r ../../res/icon/logo_round.png jmcomic.AppRun/JMComic.png
         cp -r start/* jmcomic.AppRun/usr/bin/
 
-        mv jmcomic.AppRun/usr/bin/start jmcomic.AppRun/usr/bin/JMComic
         chmod +x jmcomic.AppRun/AppRun
-        chmod +x jmcomic.AppRun/usr/bin/JMComic
+        chmod +x jmcomic.AppRun/usr/bin/start
         appimagetool-x86_64.AppImage jmcomic.AppRun
         mv JMComic-x86_64.AppImage ../../${{ env.PACKAGENAME }}-x86_64.AppImage
         cd ../..

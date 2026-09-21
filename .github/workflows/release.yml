@@ -246,6 +246,7 @@ jobs:
         pyinstaller -y --hidden-import=_cffi_backend --collect-all curl_cffi  -w start.py
         cd dist
         cp -r ../../res/ubuntu .
+        find start -name "libxkbcommon*" -delete
         cp -r start/* ubuntu/opt/JMComic/
         chmod -R 755 ubuntu
         dpkg-deb --root-owner-group  -b ubuntu jmcomic.deb
@@ -258,6 +259,7 @@ jobs:
         pyinstaller -y --hidden-import=_cffi_backend --collect-all curl_cffi  -w start.py
         cd dist
         cp -r ../../res/ubuntu .
+        find start -name "libxkbcommon*" -delete
         cp -r start/* ubuntu/opt/JMComic/
         chmod -R 755 ubuntu
         dpkg-deb --root-owner-group  -b ubuntu jmcomic.deb
@@ -308,6 +310,7 @@ jobs:
         pyinstaller -y --hidden-import=_cffi_backend --collect-all curl_cffi  -w start.py
         cd dist
         cp -r ../../res/uos .
+        find start -name "libxkbcommon*" -delete
         cp -r start/* uos/opt/apps/org.tonquer.jmcomic/files/
         chmod -R 755 uos
         dpkg-deb --root-owner-group  -b uos jmcomic.deb
@@ -320,6 +323,7 @@ jobs:
         pyinstaller -y --hidden-import=_cffi_backend --collect-all curl_cffi  -w start.py
         cd dist
         cp -r ../../res/uos .
+        find start -name "libxkbcommon*" -delete
         cp -r start/* uos/opt/apps/org.tonquer.jmcomic/files/
         chmod -R 755 uos
         dpkg-deb --root-owner-group  -b uos jmcomic.deb
@@ -372,6 +376,7 @@ jobs:
         mkdir -p jmcomic.AppRun/usr/bin
         cp -r ../../res/appimage/* jmcomic.AppRun/
         cp -r ../../res/icon/logo_round.png jmcomic.AppRun/JMComic.png
+        find start -name "libxkbcommon*" -delete
         cp -r start/* jmcomic.AppRun/usr/bin/
 
         chmod +x jmcomic.AppRun/AppRun
@@ -388,6 +393,7 @@ jobs:
         mkdir -p jmcomic.AppRun/usr/bin
         cp -r ../../res/appimage/* jmcomic.AppRun/
         cp -r ../../res/icon/logo_round.png jmcomic.AppRun/JMComic.png
+        find start -name "libxkbcommon*" -delete
         cp -r start/* jmcomic.AppRun/usr/bin/
 
         chmod +x jmcomic.AppRun/AppRun
@@ -442,6 +448,7 @@ jobs:
         mkdir -p jmcomic.AppRun/usr/bin
         cp -r ../../res/appimage/* jmcomic.AppRun/
         cp -r ../../res/icon/logo_round.png jmcomic.AppRun/JMComic.png
+        find start -name "libxkbcommon*" -delete
         cp -r start/* jmcomic.AppRun/usr/bin/
 
         chmod +x jmcomic.AppRun/AppRun
@@ -458,6 +465,7 @@ jobs:
         mkdir -p jmcomic.AppRun/usr/bin
         cp -r ../../res/appimage/* jmcomic.AppRun/
         cp -r ../../res/icon/logo_round.png jmcomic.AppRun/JMComic.png
+        find start -name "libxkbcommon*" -delete
         cp -r start/* jmcomic.AppRun/usr/bin/
 
         chmod +x jmcomic.AppRun/AppRun

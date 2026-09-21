@@ -18,15 +18,9 @@ jobs:
     env:
       PACKAGENAME: jmcomic_py310_uos
     steps:
-    - name: Add custom bin to PATH
-      run: |
-          echo "/root/.pyenv/plugins/pyenv-virtualenv/shims:/root/.pyenv/shims:/root/.pyenv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" > $GITHUB_PATH
     - uses: actions/checkout@v7
     - name: Install dependencies
       run: |
-        source /root/.bashrc 
-        ls -lh /root/.pyenv/versions/
-        pyenv global 3.10.21
         python3 -m pip install --upgrade pip
         pip install pyinstaller
         pip install -r src/requirements.txt
